@@ -228,11 +228,11 @@ params <- c("tori.abund","moon.abund","night.abund","lat.abund","long.abund","br
             "tori.occu","moon.occu","night.occu","lat.occu","long.occu","breed.occu","effort.occu")
 
 n.chains = 4 
-n.burnin = 50
-n.iter = 100
-n.thin = 5
-n.adapt = 50
-n.sample = 100
+n.burnin = 500
+n.iter = 1000
+n.thin = 50
+n.adapt = 500
+n.sample = 1000
 
 
 
@@ -263,16 +263,17 @@ BRA_LL <- run.jags(data=jags.data, inits=inits, monitor=params,
 
 
 #### MODEL ASSESSMENT ####
-MCMCplot(full.model$mcmc, params=c("mean.phi","beta.win","beta.male","beta.mass","beta.feed","beta.p.win","mean.p"))
-# ggsave("C:/Users/sop/OneDrive - Vogelwarte/General - Little owls/ANALYSES/LittleOwlSurvival/output/Fig_S1_parameter_estimates.jpg", height=11, width=8)
+MCMCplot(BRA_LL$mcmc, params=c("tori.abund","moon.abund","night.abund","lat.abund","long.abund","breed.abund","effort.abund",
+                                             "tori.occu","moon.occu","night.occu","lat.occu","long.occu","breed.occu","effort.occu"))
+# ggsave("C:/STEFFEN/OneDrive - THE ROYAL SOCIETY FOR THE PROTECTION OF BIRDS/STEFFEN/RSPB/Marine/Bycatch/Brazil_LL/output/Fig_S1_parameter_estimates.jpg", height=11, width=8)
 # ggsave("C:/STEFFEN/OneDrive - Vogelwarte/General - Little owls/MANUSCRIPTS/LittleOwlSurvival/Fig_S1_parameter_estimates.jpg", height=11, width=8)
 
-MCMCtrace(full.model$mcmc)
-MCMCsummary(full.model$mcmc)
-MCMCdiag(full.model$mcmc,
+MCMCtrace(BRA_LL$mcmc)
+MCMCsummary(BRA_LL$mcmc)
+MCMCdiag(BRA_LL$mcmc,
          round = 3,
          file_name = 'LIOW_survival',
-         dir = 'C:/Users/sop/OneDrive - Vogelwarte/General - Little owls/ANALYSES/LittleOwlSurvival/output',
+         dir = 'C:/STEFFEN/OneDrive - THE ROYAL SOCIETY FOR THE PROTECTION OF BIRDS/STEFFEN/RSPB/Marine/Bycatch/Brazil_LL/output',
          mkdir = 'LIOW_v8',
          add_field = '8.0',
          add_field_names = 'Data version',
