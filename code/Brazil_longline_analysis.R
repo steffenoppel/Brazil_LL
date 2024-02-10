@@ -17,7 +17,8 @@
 library(tidyverse)
 library(lubridate)
 library(data.table)
-library(jagsUI)
+library(runjags)
+library(MCMCvis)
 library(randomForest)
 library(dplyr)
 library(ggplot2)
@@ -46,7 +47,8 @@ summary(data)
 data %>% group_by(Toriline ) %>%
   summarise(mean=mean(BYCATCH))
 
-
+unique(data$Month)
+unique(data$Year)
 
 
 ##############################################################
@@ -78,11 +80,12 @@ RFbin
 ### need to include lat, long, season, moon, night, hooks, toriline as fixed effects
 ### include random effects for month and year
 
-sink ("ATF_Brazil_LongLine_Bycatch_v1.jags")
+sink ("code/ATF_Brazil_LongLine_Bycatch_v1.jags")
 cat(" 
 model{
   
   # PRIORS FOR REGRESSION PARAMETERS
+  
   intercept.occu ~ dnorm(0, 0.01)  ## intercept for occurrence of bycatch
   intercept.abund ~ dnorm(0, 0.01)  ## intercept for quantity of bycatch
   rho ~ dunif(0,50)  ## overdispersion parameter for negative binomial distribution
@@ -96,29 +99,39 @@ model{
   night.occu ~ dnorm(0, 0.01)
   night.abund ~ dnorm(0, 0.01)
   
+  lat.occu ~ dnorm(0, 0.01)
+  lat.abund ~ dnorm(0, 0.01)
   
-  logitprop.obs.mn ~ dnorm(0,0.001)
+  long.occu ~ dnorm(0, 0.01)
+  long.abund ~ dnorm(0, 0.01)
   
-  # RANDOM YEAR EFFECTS FOR OCCURRENCE AND ABUNDANCE
-  for(t in 1:ntrips){
-    occ.trip[t]~dnorm(0,tau.occ.trip)    ## trip-specific random effect for occurrence
-    abund.trip[t]~dnorm(0,tau.ab.trip)    ## trip-specific random effect for abundance
-    }
-  tau.occ.trip<-1/(sigma.occ.trip*sigma.occ.trip)
-  sigma.occ.trip~dunif(0,10)
-  tau.ab.trip<-1/(sigma.ab.trip*sigma.ab.trip)
-  sigma.ab.trip~dunif(0,10)
+  breed.occu ~ dnorm(0, 0.01)
+  breed.abund ~ dnorm(0, 0.01)
+  
+  effort.occu ~ dnorm(0, 0.01)
+  effort.abund ~ dnorm(0, 0.01)
   
 
-  # RANDOM VESSEL EFFECTS FOR OCCURRENCE AND ABUNDANCE
-  for(t in 1:nships){
-    occ.ship[t]~dnorm(0,tau.occ.ship)    ## ship-specific random effect for occurrence
-    abund.ship[t]~dnorm(0,tau.ab.ship)    ## ship-specific random effect for abundance
+  # RANDOM YEAR EFFECTS FOR OCCURRENCE AND ABUNDANCE
+  for(t in 1:nyears){
+    occ.year[t]~dnorm(0,tau.occ.year)    ## trip-specific random effect for occurrence
+    abund.year[t]~dnorm(0,tau.ab.year)    ## trip-specific random effect for abundance
+    }
+  tau.occ.year<-1/(sigma.occ.year*sigma.occ.year)
+  sigma.occ.year~dunif(0,10)
+  tau.ab.year<-1/(sigma.ab.year*sigma.ab.year)
+  sigma.ab.year~dunif(0,10)
+  
+
+  # RANDOM MONTH EFFECTS FOR OCCURRENCE AND ABUNDANCE
+  for(t in 1:12){
+    occ.month[t]~dnorm(0,tau.occ.month)    ## month-specific random effect for occurrence
+    abund.month[t]~dnorm(0,tau.ab.month)    ## month-specific random effect for abundance
   }
-  tau.occ.ship<-1/(sigma.occ.ship*sigma.occ.ship)
-  sigma.occ.ship~dunif(0,10)
-  tau.ab.ship<-1/(sigma.ab.ship*sigma.ab.ship)
-  sigma.ab.ship~dunif(0,10)
+  tau.occ.month<-1/(sigma.occ.month*sigma.occ.month)
+  sigma.occ.month~dunif(0,10)
+  tau.ab.month<-1/(sigma.ab.month*sigma.ab.month)
+  sigma.ab.month~dunif(0,10)
   
 
 
@@ -128,23 +141,38 @@ model{
     
     # define the logistic regression model, where psi is the probability of bycatch occurring at all
     cloglog(psi[i]) <- intercept.occu +
-                        log(N_hooks[i]) +
-                        occ.trip[trip[i]] +
-                        occ.ship[ship[i]] +
-                        treat.occu*REGULATION[i]  ###  replaced log(-log(1 - psi[i])) with cloglog(psi[i])
+                        effort.occu*N_hooks[i] +
+                        tori.occu*tori[i] +
+                        long.occu*long[i] +
+                        lat.occu*lat[i] +
+                        night.occu*night[i] +
+                        moon.occu*moon[i] +
+                        breed.occu*season[i] +
+                        
+                        occ.year[year[i]] +
+                        occ.month[month[i]]
     z[i]~dbern(psi[i])
     
     # define the negative binomial regression model for abundance and multiply with bycatch probability
     mortality[i] ~ dnegbin(phi[i],rho)
     phi[i] <- rho/(rho+(z[i])*lambda[i]) - 1e-10*(1-z[i])
-    log(lambda[i])<- log(N_hooks[i]) + intercept.abund + treat.abund*Toriline[i] + abund.set[trip[i]]
+    log(lambda[i])<- intercept.abund +
+                      effort.abund*N_hooks[i] +
+                      tori.abund*tori[i] +
+                      long.abund*long[i] +
+                      lat.abund*lat[i] +
+                      night.abund*night[i] +
+                      moon.abund*moon[i] +
+                      breed.abund*season[i]  +
+                      abund.year[year[i]] +
+                      abund.month[month[i]]
     
   } ## end loop over each observation
   
   
   # CONVERT TO ESTIMATES PER 1000 HOOKS BEFORE AND AFTER REGULATION
-  prereg <- (((1-exp(-exp(intercept.occu+log(1000)))))*(exp(intercept.abund)*1000))
-  postreg <- (((1-exp(-exp(intercept.occu+treat.occu+log(1000)))))*(exp(intercept.abund + treat.abund)*1000))
+  #prereg <- (((1-exp(-exp(intercept.occu+log(1000)))))*(exp(intercept.abund)*1000))
+  #postreg <- (((1-exp(-exp(intercept.occu+treat.occu+log(1000)))))*(exp(intercept.abund + treat.abund)*1000))
 
   
 } ## end model
@@ -153,6 +181,16 @@ sink()
 
 
 
+##############################################################
+#### STANDARDIZE VARIABLES WITH LARGE NUMERICAL VALUES 
+##############################################################
+
+nhooks_scaled<-scale(data$N_hooks)
+lat_scaled<-scale(data$Latitude)
+long_scaled<-scale(data$Longitude)
+lat_scaled<-scale(data$Latitude)
+lat_scaled<-scale(data$Latitude)
+
 
 
 ##############################################################
@@ -160,42 +198,91 @@ sink()
 ##############################################################
 
 
-jags.data <- list(mortality=data$Birds_Obs_Caught,
-                  retrHook=round(data$Hooks_Recovered),   ## maybe need to scale as in the 1000s? model runs forever if we do, but only 5 min if we leave original N
-                  obsHook=round(data$Hooks_Observed),
+jags.data <- list(mortality=data$BYCATCH,
                   N=dim(data)[1],
-                  Nobs=dim(data[!is.na(data$Hooks_Recovered),])[1],
-                  ntrips=length(unique(data$Trip_ID)),
-                  nships=length(unique(data$VESSEL_ID)),
-                  trip=as.numeric(as.factor(data$Trip_ID)),
-                  ship=as.numeric(as.factor(data$VESSEL_ID)),
-                  REGULATION=ifelse(data$Regulation=="BEFORE",0,1))
+                  nyears=length(unique(data$Year)),
+                  nmonths=length(unique(data$Month)),
+                  year=as.numeric(as.factor(data$Year)),
+                  month=as.numeric(data$Month),
+                  tori=ifelse(data$Toriline=="No",0,1),
+                  season=ifelse(data$Season=="Breading",1,0),
+                  lat=as.numeric(lat_scaled),
+                  long=as.numeric(long_scaled),
+                  N_hooks=as.numeric(nhooks_scaled),
+                  moon=data$Moon.il,
+                  night=data$Nightlight_set
+                  )
 
-inits = function(){list(treat.occu=rnorm(1,0,0.1),
-                        treat.abund=rnorm(1,0,0.1))}
 
-params <- c("treat.abund","treat.occu","prereg","postreg")
+##############################################################
+#### SET UP INITS AND PARAMETERS
+##############################################################
 
+inits = function(){list(tori.occu=rnorm(1,0,0.1),
+                        tori.abund=rnorm(1,0,0.1),
+                        night.occu=rnorm(1,0,0.1),
+                        night.abund=rnorm(1,0,0.1)
+                        )}
+
+params <- c("tori.abund","moon.abund","night.abund","lat.abund","long.abund","breed.abund","effort.abund",
+            "tori.occu","moon.occu","night.occu","lat.occu","long.occu","breed.occu","effort.occu")
+
+n.chains = 4 
+n.burnin = 50
+n.iter = 100
+n.thin = 5
+n.adapt = 50
+n.sample = 100
 
 
 
 ##############################################################
 #### RUN JAGS MODEL [takes 35 minutes]
 ##############################################################
-n.chains = 4 
-n.burnin = 50000
-n.iter = 100000
-n.thin = 5
 
 
-NamLLmodel <- jagsUI(data=jags.data,
-                  model = "C:/STEFFEN/RSPB/Marine/Bycatch/Namibia/ATF_Nam_LongLine_Bycatch_v5.jags",
-                  inits=inits,
-                  parameters.to.save =params,
-                  n.chains=n.chains,
-                  n.thin = n.thin,
-                  n.iter = n.iter,
-                  n.burnin = n.burnin, parallel=T, n.cores=4)
+# BRA_LL <- jagsUI(data=jags.data,
+#                   model = "C:/STEFFEN/OneDrive - THE ROYAL SOCIETY FOR THE PROTECTION OF BIRDS/STEFFEN/RSPB/Marine/Bycatch/Brazil_LL/code/ATF_Brazil_LongLine_Bycatch_v1.jags",
+#                   inits=inits,
+#                   parameters.to.save =params,
+#                   n.chains=n.chains,
+#                   n.thin = n.thin,
+#                   n.iter = n.iter,
+#                   n.burnin = n.burnin, parallel=T, n.cores=4)
+
+
+
+BRA_LL <- run.jags(data=jags.data, inits=inits, monitor=params,
+                             model="C:/STEFFEN/OneDrive - THE ROYAL SOCIETY FOR THE PROTECTION OF BIRDS/STEFFEN/RSPB/Marine/Bycatch/Brazil_LL/code/ATF_Brazil_LongLine_Bycatch_v1.jags",
+                             n.chains = n.chains, thin = n.thin, burnin = n.burnin, adapt = n.adapt,sample = n.sample, 
+                             method = "rjparallel") 
+
+
+
+
+
+
+#### MODEL ASSESSMENT ####
+MCMCplot(full.model$mcmc, params=c("mean.phi","beta.win","beta.male","beta.mass","beta.feed","beta.p.win","mean.p"))
+# ggsave("C:/Users/sop/OneDrive - Vogelwarte/General - Little owls/ANALYSES/LittleOwlSurvival/output/Fig_S1_parameter_estimates.jpg", height=11, width=8)
+# ggsave("C:/STEFFEN/OneDrive - Vogelwarte/General - Little owls/MANUSCRIPTS/LittleOwlSurvival/Fig_S1_parameter_estimates.jpg", height=11, width=8)
+
+MCMCtrace(full.model$mcmc)
+MCMCsummary(full.model$mcmc)
+MCMCdiag(full.model$mcmc,
+         round = 3,
+         file_name = 'LIOW_survival',
+         dir = 'C:/Users/sop/OneDrive - Vogelwarte/General - Little owls/ANALYSES/LittleOwlSurvival/output',
+         mkdir = 'LIOW_v8',
+         add_field = '8.0',
+         add_field_names = 'Data version',
+         save_obj = TRUE,
+         obj_name = 'LIOW-fit-27Nov2023',
+         add_obj = list(INPUT, sessionInfo()),
+         add_obj_names = c('surv-data-27Nov2023', 'session-info-27Nov2023'))
+
+
+
 
 
 

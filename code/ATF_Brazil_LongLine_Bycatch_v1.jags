@@ -1,0 +1,96 @@
+ 
+model{
+  
+  # PRIORS FOR REGRESSION PARAMETERS
+  
+  intercept.occu ~ dnorm(0, 0.01)  ## intercept for occurrence of bycatch
+  intercept.abund ~ dnorm(0, 0.01)  ## intercept for quantity of bycatch
+  rho ~ dunif(0,50)  ## overdispersion parameter for negative binomial distribution
+
+  tori.occu ~ dnorm(0, 0.01)
+  tori.abund ~ dnorm(0, 0.01)
+  
+  moon.occu ~ dnorm(0, 0.01)
+  moon.abund ~ dnorm(0, 0.01)
+  
+  night.occu ~ dnorm(0, 0.01)
+  night.abund ~ dnorm(0, 0.01)
+  
+  lat.occu ~ dnorm(0, 0.01)
+  lat.abund ~ dnorm(0, 0.01)
+  
+  long.occu ~ dnorm(0, 0.01)
+  long.abund ~ dnorm(0, 0.01)
+  
+  breed.occu ~ dnorm(0, 0.01)
+  breed.abund ~ dnorm(0, 0.01)
+  
+  effort.occu ~ dnorm(0, 0.01)
+  effort.abund ~ dnorm(0, 0.01)
+  
+
+  # RANDOM YEAR EFFECTS FOR OCCURRENCE AND ABUNDANCE
+  for(t in 1:nyears){
+    occ.year[t]~dnorm(0,tau.occ.year)    ## trip-specific random effect for occurrence
+    abund.year[t]~dnorm(0,tau.ab.year)    ## trip-specific random effect for abundance
+    }
+  tau.occ.year<-1/(sigma.occ.year*sigma.occ.year)
+  sigma.occ.year~dunif(0,10)
+  tau.ab.year<-1/(sigma.ab.year*sigma.ab.year)
+  sigma.ab.year~dunif(0,10)
+  
+
+  # RANDOM MONTH EFFECTS FOR OCCURRENCE AND ABUNDANCE
+  for(t in 1:12){
+    occ.month[t]~dnorm(0,tau.occ.month)    ## month-specific random effect for occurrence
+    abund.month[t]~dnorm(0,tau.ab.month)    ## month-specific random effect for abundance
+  }
+  tau.occ.month<-1/(sigma.occ.month*sigma.occ.month)
+  sigma.occ.month~dunif(0,10)
+  tau.ab.month<-1/(sigma.ab.month*sigma.ab.month)
+  sigma.ab.month~dunif(0,10)
+  
+
+
+  #### LIKELIHOOD LOOP OVER  every set of longlines
+
+  for(i in 1:N){
+    
+    # define the logistic regression model, where psi is the probability of bycatch occurring at all
+    cloglog(psi[i]) <- intercept.occu +
+                        effort.occu*N_hooks[i] +
+                        tori.occu*tori[i] +
+                        long.occu*long[i] +
+                        lat.occu*lat[i] +
+                        night.occu*night[i] +
+                        moon.occu*moon[i] +
+                        breed.occu*season[i] +
+                        
+                        occ.year[year[i]] +
+                        occ.month[month[i]]
+    z[i]~dbern(psi[i])
+    
+    # define the negative binomial regression model for abundance and multiply with bycatch probability
+    mortality[i] ~ dnegbin(phi[i],rho)
+    phi[i] <- rho/(rho+(z[i])*lambda[i]) - 1e-10*(1-z[i])
+    log(lambda[i])<- intercept.abund +
+                      effort.abund*N_hooks[i] +
+                      tori.abund*tori[i] +
+                      long.abund*long[i] +
+                      lat.abund*lat[i] +
+                      night.abund*night[i] +
+                      moon.abund*moon[i] +
+                      breed.abund*season[i]  +
+                      abund.year[year[i]] +
+                      abund.month[month[i]]
+    
+  } ## end loop over each observation
+  
+  
+  # CONVERT TO ESTIMATES PER 1000 HOOKS BEFORE AND AFTER REGULATION
+  #prereg <- (((1-exp(-exp(intercept.occu+log(1000)))))*(exp(intercept.abund)*1000))
+  #postreg <- (((1-exp(-exp(intercept.occu+treat.occu+log(1000)))))*(exp(intercept.abund + treat.abund)*1000))
+
+  
+} ## end model
+    
