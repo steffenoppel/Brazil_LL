@@ -29,7 +29,7 @@ library(maps)
 
 #### read in original file and rename columns
 ## coordinates are in awful fucked up format with or without decimal point and with range of decimal places
-## manually fixed one date in Excel file
+## manually fixed two dates in Excel file (Set 742 and 918)
 dd <- read_excel("data/Brazil_longline_bycatch_data.xlsx",   
                  sheet="DB_Observer_Full_ver00") %>%
   rename(Set=`Set#`,BYCATCH=`N birds`) %>%
@@ -39,7 +39,7 @@ dd <- read_excel("data/Brazil_longline_bycatch_data.xlsx",
   mutate(Latitude=ifelse(Latitude>-90,Latitude,Latitude/10000)) %>%
   mutate(Latitude=ifelse(Latitude>-180,Latitude,Latitude/10)) %>%
   mutate(Latitude=ifelse(Latitude>-10,Latitude*10,Latitude)) %>%
-  mutate(Date=as.Date(as.numeric(Date), origin = ymd("1899-12-30")))
+  mutate(Date=as.Date(Date, origin = "1899-12-30"))
 
 summary(dd)
 
