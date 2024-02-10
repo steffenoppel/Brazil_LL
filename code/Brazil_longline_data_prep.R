@@ -39,6 +39,7 @@ dd <- read_excel("data/Brazil_longline_bycatch_data.xlsx",
   mutate(Latitude=ifelse(Latitude>-90,Latitude,Latitude/10000)) %>%
   mutate(Latitude=ifelse(Latitude>-180,Latitude,Latitude/10)) %>%
   mutate(Latitude=ifelse(Latitude>-10,Latitude*10,Latitude)) %>%
+  mutate(Moon.il=ifelse(Moon.il>1,Moon.il/10,Moon.il)) %>%   ### 5 sets have moon.ill >1 which should not be possible
   mutate(Date=as.Date(Date, origin = "1899-12-30"))
 
 summary(dd)

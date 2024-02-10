@@ -18,6 +18,7 @@ library(tidyverse)
 library(lubridate)
 library(data.table)
 library(jagsUI)
+library(randomForest)
 library(dplyr)
 library(ggplot2)
 library(viridis)
@@ -32,7 +33,7 @@ select<-dplyr::select
 setwd("C:/STEFFEN/OneDrive - THE ROYAL SOCIETY FOR THE PROTECTION OF BIRDS/STEFFEN/RSPB/Marine/Bycatch/Brazil_LL")
 data<-readRDS("data/Brazil_formatted_bycatch_data.rds")
 head(data)
-
+summary(data)
 
 
 
@@ -48,12 +49,34 @@ data %>% group_by(Toriline ) %>%
 
 
 
+##############################################################
+#### PRELIMINARY EXPLORATORY ANALYSIS TO DETERMINE WHICH VARIABLES ARE IMPORTANT
+##############################################################
+### very poor performance of these models
+### will not be able to explain a lot of bycatch variation!!
+
+RF<-randomForest(BYCATCH~N_hooks+Toriline+Year+Month+Latitude+Longitude+Season+Nightlight_set+Moon.il, data=data, mtry=3,ntree=1500, importance=T, replace=F)
+varImpPlot(RF)
+RF
+par(mfrow=c(3,2))
+partialPlot(RF,as.data.frame(data),"Longitude")
+partialPlot(RF,as.data.frame(data),"Latitude")
+partialPlot(RF,as.data.frame(data),"N_hooks")
+partialPlot(RF,as.data.frame(data),"Nightlight_set")
+partialPlot(RF,as.data.frame(data),"Moon.il")
+partialPlot(RF,as.data.frame(data),"Year")
+
+RFbin<-randomForest(as.factor(ifelse(BYCATCH>0,"yes","no"))~N_hooks+Toriline+Year+Month+Latitude+Longitude+Season+Nightlight_set+Moon.il, data=data, mtry=3,ntree=1500, importance=T, replace=F)
+varImpPlot(RFbin)
+RFbin
+
 
 
 ##############################################################
 #### SPECIFY AND RUN JAGS MODELS 
 ##############################################################
-
+### need to include lat, long, season, moon, night, hooks, toriline as fixed effects
+### include random effects for month and year
 
 sink ("ATF_Brazil_LongLine_Bycatch_v1.jags")
 cat(" 
