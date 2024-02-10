@@ -272,15 +272,15 @@ MCMCtrace(BRA_LL$mcmc)
 MCMCsummary(BRA_LL$mcmc)
 MCMCdiag(BRA_LL$mcmc,
          round = 3,
-         file_name = 'LIOW_survival',
+         file_name = 'Brazil_LL_v1',
          dir = 'C:/STEFFEN/OneDrive - THE ROYAL SOCIETY FOR THE PROTECTION OF BIRDS/STEFFEN/RSPB/Marine/Bycatch/Brazil_LL/output',
-         mkdir = 'LIOW_v8',
-         add_field = '8.0',
+         mkdir = 'Brazil_LL_v1',
+         add_field = '1.0',
          add_field_names = 'Data version',
          save_obj = TRUE,
-         obj_name = 'LIOW-fit-27Nov2023',
-         add_obj = list(INPUT, sessionInfo()),
-         add_obj_names = c('surv-data-27Nov2023', 'session-info-27Nov2023'))
+         obj_name = 'Brazil_LL_v1',
+         add_obj = list(jags.data, sessionInfo()),
+         add_obj_names = c('data-09Feb2024', 'session-info-09Feb2024'))
 
 
 
