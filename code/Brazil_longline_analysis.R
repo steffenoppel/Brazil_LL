@@ -230,7 +230,7 @@ params <- c("tori.abund","moon.abund","night.abund","lat.abund","long.abund","br
 n.chains = 4 
 n.burnin = 500
 n.iter = 1000
-n.thin = 50
+n.thin = 5
 n.adapt = 500
 n.sample = 1000
 
