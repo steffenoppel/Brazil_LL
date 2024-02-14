@@ -232,7 +232,7 @@ n.burnin = 500
 n.iter = 1000
 n.thin = 5
 n.adapt = 500
-n.sample = 1000
+n.sample = 200
 
 
 
