@@ -294,7 +294,7 @@ MCMCdiag(BRA_LL$mcmc,
 ###############################################################################
 
 
-change<-(NamLLmodel$sims.list$prereg-NamLLmodel$sims.list$postreg)/NamLLmodel$sims.list$prereg
+change<-(BRA_LL$sims.list$prereg-BRA_LL$sims.list$postreg)/BRA_LL$sims.list$prereg
 quantile(change,0.5)
 quantile(change,0.025)
 quantile(change,0.975)
