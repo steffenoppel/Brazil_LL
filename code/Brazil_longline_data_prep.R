@@ -9,6 +9,9 @@
 ### adapted up by Steffen Oppel 31 July 2019
 ### data provided by Yann Rouxel and Dimas Gianuca in single xlsx spreadsheet
 
+### updated on 16 Feb 2024 after Dimas Gianuca explained data structure
+### BSL prior to 2011 are experimental and should not be used
+
 
 
 ##############################################################
@@ -43,6 +46,16 @@ dd <- read_excel("data/Brazil_longline_bycatch_data.xlsx",
   mutate(Date=as.Date(Date, origin = "1899-12-30"))
 
 summary(dd)
+dim(dd)
+
+##############################################################
+#### REMOVE THE EARLY DESIGN BSL
+##############################################################
+
+dd_red<- dd %>% filter(Year>2008)  ## remove data from before 2009
+dim(dd_red)
+table(dd_red$Toriline)
+table(dd$Toriline)
 
 
 ##############################################################
@@ -57,3 +70,4 @@ points(x = dd$Latitude, y = dd$Longitude, col="firebrick", pch=21)
 #### SAVE PROCESSED DATA
 ##############################################################
 saveRDS(dd,"data/Brazil_formatted_bycatch_data.rds")
+saveRDS(dd_red,"data/Brazil_formatted_bycatch_data2009_2018.rds")
