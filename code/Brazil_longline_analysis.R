@@ -9,6 +9,7 @@
 ## model based on Gardner et al. 2008 and Field et al. 2019
 ## based on scripts from Namibia, Da Rocha et al. 2021: https://www.sciencedirect.com/science/article/abs/pii/S0006320720309733
 
+## updated on 16 February 2024 to exclude data from before 2009
 
 ##############################################################
 #### load ALL NECESSARY libraries
@@ -22,7 +23,6 @@ library(MCMCvis)
 library(randomForest)
 library(dplyr)
 library(ggplot2)
-library(viridis)
 filter<-dplyr::filter
 select<-dplyr::select
 
@@ -32,7 +32,7 @@ select<-dplyr::select
 ##############################################################
 
 setwd("C:/STEFFEN/OneDrive - THE ROYAL SOCIETY FOR THE PROTECTION OF BIRDS/STEFFEN/RSPB/Marine/Bycatch/Brazil_LL")
-data<-readRDS("data/Brazil_formatted_bycatch_data.rds")
+data<-readRDS("data/Brazil_formatted_bycatch_data2009_2018.rds")
 head(data)
 summary(data)
 
@@ -79,8 +79,10 @@ RFbin
 ##############################################################
 ### need to include lat, long, season, moon, night, hooks, toriline as fixed effects
 ### include random effects for month and year
+### suggestions for how to include effort offset: https://stats.stackexchange.com/questions/446929/how-to-correctly-include-offset-in-bayesian-zero-inflated-poisson-model-in-winbu
+### not implemented yet - just reduced variables
 
-sink ("code/ATF_Brazil_LongLine_Bycatch_v1.jags")
+sink ("code/ATF_Brazil_LongLine_Bycatch_v2.jags")
 cat(" 
 model{
   
@@ -92,19 +94,7 @@ model{
 
   tori.occu ~ dnorm(0, 0.01)
   tori.abund ~ dnorm(0, 0.01)
-  
-  moon.occu ~ dnorm(0, 0.01)
-  moon.abund ~ dnorm(0, 0.01)
-  
-  night.occu ~ dnorm(0, 0.01)
-  night.abund ~ dnorm(0, 0.01)
-  
-  lat.occu ~ dnorm(0, 0.01)
-  lat.abund ~ dnorm(0, 0.01)
-  
-  long.occu ~ dnorm(0, 0.01)
-  long.abund ~ dnorm(0, 0.01)
-  
+   
   breed.occu ~ dnorm(0, 0.01)
   breed.abund ~ dnorm(0, 0.01)
   
@@ -143,10 +133,6 @@ model{
     cloglog(psi[i]) <- intercept.occu +
                         effort.occu*N_hooks[i] +
                         tori.occu*tori[i] +
-                        long.occu*long[i] +
-                        lat.occu*lat[i] +
-                        night.occu*night[i] +
-                        moon.occu*moon[i] +
                         breed.occu*season[i] +
                         
                         occ.year[year[i]] +
@@ -159,10 +145,6 @@ model{
     log(lambda[i])<- intercept.abund +
                       effort.abund*N_hooks[i] +
                       tori.abund*tori[i] +
-                      long.abund*long[i] +
-                      lat.abund*lat[i] +
-                      night.abund*night[i] +
-                      moon.abund*moon[i] +
                       breed.abund*season[i]  +
                       abund.year[year[i]] +
                       abund.month[month[i]]
