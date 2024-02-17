@@ -235,7 +235,7 @@ n.sample = 200
 
 
 BRA_LL <- run.jags(data=jags.data, inits=inits, monitor=params,
-                             model="C:/STEFFEN/OneDrive - THE ROYAL SOCIETY FOR THE PROTECTION OF BIRDS/STEFFEN/RSPB/Marine/Bycatch/Brazil_LL/code/ATF_Brazil_LongLine_Bycatch_v1.jags",
+                             model="C:/STEFFEN/OneDrive - THE ROYAL SOCIETY FOR THE PROTECTION OF BIRDS/STEFFEN/RSPB/Marine/Bycatch/Brazil_LL/code/ATF_Brazil_LongLine_Bycatch_v2.jags",
                              n.chains = n.chains, thin = n.thin, burnin = n.burnin, adapt = n.adapt,sample = n.sample, 
                              method = "rjparallel") 
 

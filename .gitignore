@@ -42,3 +42,7 @@ vignettes/*.pdf
 # RAW DATA
 /data
 .xlsx
+
+# REPORTS
+.pdf
+.docx
