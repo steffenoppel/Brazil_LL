@@ -44,6 +44,10 @@ summary(data)
 ##############################################################
 #### INSPECT DATA DISTRIBUTION
 ##############################################################
+table(data$BYCATCH)
+
+data %>% filter(BYCATCH>3)
+alldata %>% filter(BYCATCH>3)
 
 ### ABUNDANCE OF BYCATCH REDUCED FROM 0.19 to 0.07 / 1000 hooks
 
