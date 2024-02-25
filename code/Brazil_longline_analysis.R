@@ -34,8 +34,8 @@ select<-dplyr::select
 ##############################################################
 
 setwd("C:/STEFFEN/OneDrive - THE ROYAL SOCIETY FOR THE PROTECTION OF BIRDS/STEFFEN/RSPB/Marine/Bycatch/Brazil_LL")
-data<-readRDS("data/Brazil_formatted_bycatch_data2009_2018.rds")
-alldata<-readRDS("data/Brazil_formatted_bycatch_data.rds")
+data<-readRDS("data/Brazil_formatted_bycatch_data2009_2018.rds") %>% mutate(BYCATCH_BIN=ifelse(BYCATCH==0,0,1))
+alldata<-readRDS("data/Brazil_formatted_bycatch_data.rds") %>% mutate(BYCATCH_BIN=ifelse(BYCATCH==0,0,1))
 head(data)
 summary(data)
 
@@ -91,10 +91,16 @@ data %>% mutate(BYCATCH_BIN=ifelse(BYCATCH==0,0,1)) %>%
 ##############################################################
 ### very poor performance of these models
 ### will not be able to explain a lot of bycatch variation!!
-
-RF<-randomForest(BPUE~Toriline+Year+Month+Latitude+Longitude+Season+Nightlight_set+Moon.il, data=data, mtry=3,ntree=1500, importance=T, replace=F)
+### including BYCATCH_BIN in abundance model takes explained variance to >50% but even that is poor given that BYCATCH_BIN will explain all the 0s
+RF<-randomForest(BPUE~N_hooks+Toriline+Year+Month+Latitude+Longitude+Season+Nightlight_set+Moon.il, data=data, mtry=3,ntree=1500, importance=T, replace=F)
 varImpPlot(RF)
 RF
+
+RFbin<-randomForest(as.factor(BYCATCH_BIN)~N_hooks+Toriline+Year+Month+Latitude+Longitude+Season+Nightlight_set+Moon.il, data=data, mtry=3,ntree=1500, importance=T, replace=F)
+varImpPlot(RFbin)
+RFbin
+
+
 par(mfrow=c(3,2))
 partialPlot(RF,as.data.frame(data),"Longitude")
 partialPlot(RF,as.data.frame(data),"Latitude")
@@ -103,9 +109,43 @@ partialPlot(RF,as.data.frame(data),"Nightlight_set")
 partialPlot(RF,as.data.frame(data),"Moon.il")
 partialPlot(RF,as.data.frame(data),"Year")
 
-RFbin<-randomForest(as.factor(ifelse(BYCATCH>0,"yes","no"))~N_hooks+Toriline+Year+Month+Latitude+Longitude+Season+Nightlight_set+Moon.il, data=data, mtry=3,ntree=1500, importance=T, replace=F)
-varImpPlot(RFbin)
-RFbin
+#####  PLOT VARIABLE IMPORTANCE FOR BOTH MODELS ###########
+
+VARbinary<-importance(RFbin, type=1)
+VARnum<-importance(RF, type=1)
+
+
+IMP<-bind_rows(VARbinary[,1],VARnum[,1]) %>%
+  mutate(MAX = do.call(pmax, (.))) %>%
+  mutate(model=c("occurrence","BPUE")) %>%
+  gather(key=variable, value=MSE,-model,-MAX) %>%
+  mutate(IMP=(MSE/MAX)*100) %>%
+  arrange(model,desc(IMP))
+    
+    
+ggplot(IMP, aes(x=variable, y=IMP)) +
+  geom_bar(stat='identity', fill='lightblue') +
+  coord_flip()+
+  facet_wrap(~model, ncol=2) +
+  ylab("Variable importance (%)") +
+  xlab("Explanatory variable") +
+  scale_y_continuous(limits=c(-20,115), breaks=seq(0,100,20), labels=seq(0,100,20))+
+  scale_x_discrete(name="",limit = c("Toriline","Moon.il","N_hooks","Month","Latitude","Season","Nightlight_set","Longitude","Year"))  +
+  
+  theme(panel.background=element_rect(fill="white", colour="black"), 
+        axis.text.x=element_text(size=18, color="black"), 
+        axis.title=element_text(size=20), 
+        strip.text=element_text(size=18, color="black"),
+        strip.background=element_rect(fill="white", colour="black"), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        panel.border = element_blank())
+
+
+# ggsave("output/Brazil_LL_RF_variable_importance.jpg", width=9, height=9)
+
+
+
 
 
 
