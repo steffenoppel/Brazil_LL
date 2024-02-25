@@ -10,6 +10,8 @@
 ## based on scripts from Namibia, Da Rocha et al. 2021: https://www.sciencedirect.com/science/article/abs/pii/S0006320720309733
 
 ## updated on 16 February 2024 to exclude data from before 2009
+## updated 24 February to include more extensive data exploration - RF cannot find a signal, so added univariate exploration
+
 
 ##############################################################
 #### load ALL NECESSARY libraries
@@ -33,6 +35,7 @@ select<-dplyr::select
 
 setwd("C:/STEFFEN/OneDrive - THE ROYAL SOCIETY FOR THE PROTECTION OF BIRDS/STEFFEN/RSPB/Marine/Bycatch/Brazil_LL")
 data<-readRDS("data/Brazil_formatted_bycatch_data2009_2018.rds")
+alldata<-readRDS("data/Brazil_formatted_bycatch_data.rds")
 head(data)
 summary(data)
 
@@ -42,13 +45,34 @@ summary(data)
 #### INSPECT DATA DISTRIBUTION
 ##############################################################
 
-### OCCURRENCE OF BYCATCH REDUCED FROM >60% to <10%
+### ABUNDANCE OF BYCATCH REDUCED FROM 0.17 to 0.09
 
 data %>% group_by(Toriline ) %>%
   summarise(mean=mean(BYCATCH))
 
+### OCCURRENCE OF BYCATCH REDUCED FROM 9% to 6% (very little)
+
+data %>% mutate(BYCATCH_BIN=ifelse(BYCATCH==0,0,1)) %>%
+  group_by(Toriline) %>%
+  summarise(mean=mean(BYCATCH_BIN))
+
 unique(data$Month)
 unique(data$Year)
+
+
+### ABUNDANCE OF BYCATCH REDUCED FROM 0.14 to 0.09 - makes no difference to use old data
+
+alldata %>% filter(!(Year<2009 & Toriline=="Yes")) %>%
+  group_by(Toriline) %>%
+  summarise(mean=mean(BYCATCH))
+
+### OCCURRENCE OF BYCATCH REDUCED FROM 7% to 6% (even worse when just using reduced data)
+
+alldata %>% filter(!(Year<2009 & Toriline=="Yes")) %>%
+  mutate(BYCATCH_BIN=ifelse(BYCATCH==0,0,1)) %>%
+  group_by(Toriline) %>%
+  summarise(mean=mean(BYCATCH_BIN))
+
 
 
 ##############################################################
