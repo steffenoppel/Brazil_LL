@@ -24,6 +24,8 @@ library(lubridate)
 library(dplyr)
 library(data.table)
 library(maps)
+library(tmap)
+library(sf)
 
 
 ##############################################################
@@ -43,7 +45,9 @@ dd <- read_excel("data/Brazil_longline_bycatch_data.xlsx",
   mutate(Latitude=ifelse(Latitude>-180,Latitude,Latitude/10)) %>%
   mutate(Latitude=ifelse(Latitude>-10,Latitude*10,Latitude)) %>%
   mutate(Moon.il=ifelse(Moon.il>1,Moon.il/10,Moon.il)) %>%   ### 5 sets have moon.ill >1 which should not be possible
-  mutate(Date=as.Date(Date, origin = "1899-12-30"))
+  mutate(Date=as.Date(Date, origin = "1899-12-30")) %>%
+  mutate(BPUE=BYCATCH/(N_hooks/1000)) %>%
+  filter(Latitude>-50)  ## filter out one suspicious location south-east of the Falklands
 
 summary(dd)
 dim(dd)
@@ -62,8 +66,15 @@ table(dd$Toriline)
 #### CHECK THAT COORDINATES MAKE SENSE
 ##############################################################
 
-map(database = "world") 
-points(x = dd$Latitude, y = dd$Longitude, col="firebrick", pch=21)
+#map(database = "world") 
+#points(x = dd$Latitude, y = dd$Longitude, col="firebrick", pch=21)
+
+dd_sf<-dd %>%
+  st_as_sf(coords = c("Longitude", "Latitude"), crs=4326)  
+
+tmap_mode("view")
+  tm_shape(dd_sf)  +
+  tm_symbols(col = 'BPUE', size = 0.1)
 
 
 ##############################################################
