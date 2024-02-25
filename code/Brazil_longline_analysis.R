@@ -45,10 +45,10 @@ summary(data)
 #### INSPECT DATA DISTRIBUTION
 ##############################################################
 
-### ABUNDANCE OF BYCATCH REDUCED FROM 0.17 to 0.09
+### ABUNDANCE OF BYCATCH REDUCED FROM 0.19 to 0.07 / 1000 hooks
 
 data %>% group_by(Toriline ) %>%
-  summarise(mean=mean(BYCATCH))
+  summarise(mean=mean(BPUE))
 
 ### OCCURRENCE OF BYCATCH REDUCED FROM 9% to 6% (very little)
 
@@ -60,11 +60,12 @@ unique(data$Month)
 unique(data$Year)
 
 
+### CONFIRM THAT THERE IS NO BENEFIT TO KEEP ANY DATA FROM BEFORE 2009
 ### ABUNDANCE OF BYCATCH REDUCED FROM 0.14 to 0.09 - makes no difference to use old data
 
 alldata %>% filter(!(Year<2009 & Toriline=="Yes")) %>%
   group_by(Toriline) %>%
-  summarise(mean=mean(BYCATCH))
+  summarise(mean=mean(BPUE))
 
 ### OCCURRENCE OF BYCATCH REDUCED FROM 7% to 6% (even worse when just using reduced data)
 
@@ -75,19 +76,29 @@ alldata %>% filter(!(Year<2009 & Toriline=="Yes")) %>%
 
 
 
+#### EXPLORE DISTRIBUTION OF VARIABLES WITH AND WITHOUT BYCATCH
+
+data %>% mutate(BYCATCH_BIN=ifelse(BYCATCH==0,0,1)) %>%
+  gather(key="Variable",value="Value", -Set,-Date,-BYCATCH_BIN,-BYCATCH,-BPUE,-Daylight_set,-N_hooks,-Night_set) %>%
+  ggplot(aes(x=as.factor(BYCATCH_BIN), y=Value)) +
+  facet_wrap(~Variable, scales="free_y", ncol=3) +
+  geom_boxplot()
+
+
+
 ##############################################################
 #### PRELIMINARY EXPLORATORY ANALYSIS TO DETERMINE WHICH VARIABLES ARE IMPORTANT
 ##############################################################
 ### very poor performance of these models
 ### will not be able to explain a lot of bycatch variation!!
 
-RF<-randomForest(BYCATCH~N_hooks+Toriline+Year+Month+Latitude+Longitude+Season+Nightlight_set+Moon.il, data=data, mtry=3,ntree=1500, importance=T, replace=F)
+RF<-randomForest(BPUE~Toriline+Year+Month+Latitude+Longitude+Season+Nightlight_set+Moon.il, data=data, mtry=3,ntree=1500, importance=T, replace=F)
 varImpPlot(RF)
 RF
 par(mfrow=c(3,2))
 partialPlot(RF,as.data.frame(data),"Longitude")
 partialPlot(RF,as.data.frame(data),"Latitude")
-partialPlot(RF,as.data.frame(data),"N_hooks")
+partialPlot(RF,as.data.frame(data),"Season")
 partialPlot(RF,as.data.frame(data),"Nightlight_set")
 partialPlot(RF,as.data.frame(data),"Moon.il")
 partialPlot(RF,as.data.frame(data),"Year")
