@@ -230,7 +230,7 @@ bind_rows(BPUE_BSL,BPUE_none) %>%
         panel.grid.minor = element_blank(), 
         panel.border = element_blank())
 
-ggsave("Brazil_LL_Toriline_bycatch_difference.jpg", width=8, height=7)
+ggsave("output/Brazil_LL_Toriline_bycatch_difference.jpg", width=8, height=7)
 
 
 
