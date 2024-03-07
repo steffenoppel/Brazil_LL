@@ -89,6 +89,12 @@ data %>% mutate(BYCATCH_BIN=ifelse(BYCATCH==0,0,1)) %>%
   geom_boxplot()
 
 
+#### EXPLORE BYCATCH DATA DISTRIBUTION
+
+data %>% #filter(BYCATCH>0) %>%
+  ggplot(aes(x=BPUE, fill=Toriline)) +
+  geom_histogram()
+
 
 ##############################################################
 #### PRELIMINARY EXPLORATORY ANALYSIS TO DETERMINE WHICH VARIABLES ARE IMPORTANT
@@ -103,6 +109,10 @@ RF
 RFbin<-randomForest(as.factor(BYCATCH_BIN)~N_hooks+Toriline+Year+Month+Latitude+Longitude+Season+Nightlight_set+Moon.il, data=data, mtry=3,ntree=1500, importance=T, replace=F)
 varImpPlot(RFbin)
 RFbin
+
+RFabund<-randomForest(BPUE~N_hooks+Toriline+Year+Month+Latitude+Longitude+Season+Nightlight_set+Moon.il, data=data[data$BYCATCH_BIN==1,], mtry=3,ntree=1500, importance=T, replace=F)
+varImpPlot(RF)
+RFabund
 
 
 par(mfrow=c(3,2))
@@ -148,6 +158,79 @@ ggplot(IMP, aes(x=variable, y=IMP)) +
 
 # ggsave("output/Brazil_LL_RF_variable_importance.jpg", width=9, height=9)
 
+
+
+
+##############################################################
+#### DATASET IS POORLY BALANCED - RESAMPLE
+##############################################################
+### retain all Toriline samples
+### randomly sample same number of no Toriline samples
+### repeat a 1000 times
+### calculate bootstrapped confidence interval
+
+table(data$Toriline)
+
+BSL<- data %>% filter(Toriline=="Yes") 
+none<- data %>% filter(Toriline=="No") 
+
+
+
+## bootstrapping the BPUE samples (10000 random draws)
+BSL.samples <- matrix(sample(BSL$BPUE, size = 10000 * nrow(BSL), replace = TRUE),10000, nrow(BSL))
+BSL.statistics <- apply(BSL.samples, 1, mean)
+BPUE_BSL<-data.frame(treatment="BSL",mean=mean(BSL.statistics),
+                         lcl=quantile(BSL.statistics,0.025),ucl=quantile(BSL.statistics,0.975))
+
+none.samples <- matrix(sample(none$BPUE, size = 10000 * nrow(BSL), replace = TRUE),10000, nrow(BSL))
+none.statistics <- apply(none.samples, 1, mean)
+BPUE_none<-data.frame(treatment="none",mean=mean(none.statistics),
+                     lcl=quantile(none.statistics,0.025),ucl=quantile(none.statistics,0.975))
+
+
+### calculating the BPUE differences
+
+BSL_DIFF_BPUE<-data.frame(treatment="BSL_difference",mean=mean(BSL.statistics-none.statistics),
+                           lcl=quantile(BSL.statistics-none.statistics,0.025),ucl=quantile(BSL.statistics-none.statistics,0.975))
+
+### quantifying differences in per cent
+BSL_DIFF_BPUE[,5:7]<-(BSL_DIFF_BPUE[,2:4]/BPUE_none[,2])*100
+
+
+BSL_DIFF_BPUE
+
+
+### COMBINE NUMBERS FOR OUTPUT FILE
+
+DIFF_SUMMARY<-bind_rows(BPUE_BSL,BPUE_none,BSL_DIFF_BPUE) %>%
+  rename(`prop.mean.diff(%)`=mean.1,`prop.lcl.diff(%)`=lcl.1,`prop.ucl.diff(%)`=ucl.1) %>%
+  rename(`abs.mean.diff(N)`=mean,`abs.lcl.diff(N)`=lcl,`abs.ucl.diff(N)`=ucl)
+
+
+fwrite(DIFF_SUMMARY,"output/Brazil_LL_Toriline_bootstrap_summary.csv")
+
+
+
+### PLOT predicted OUTPUT FOR FISH AND SEABIRDS ###
+
+bind_rows(BPUE_BSL,BPUE_none) %>%
+  ggplot(aes(y=mean, x=treatment, col=treatment)) + geom_point(size=3)+
+  geom_errorbar(aes(ymin=lcl, ymax=ucl), width=.05)+
+  scale_y_continuous(limits=c(0,0.5), breaks=seq(0,0.5,0.1)) +
+  xlab("") +
+  ylab("Bycaught seabirds / 1000 hooks") +
+  theme(panel.background=element_rect(fill="white", colour="black"), 
+        axis.text=element_text(size=16, color="black"), 
+        axis.title=element_text(size=18), 
+        strip.text=element_text(size=18, color="black"),
+        legend.position="none",
+        strip.background = element_blank(),
+        strip.placement = "outside", 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        panel.border = element_blank())
+
+ggsave("Brazil_LL_Toriline_bycatch_difference.jpg", width=8, height=7)
 
 
 
